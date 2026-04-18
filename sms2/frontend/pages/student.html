@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EduMS — Sinh viên</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+/* ── Extra styles for student page ── */
+.enrolled-badge { display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--teal-bg);color:var(--teal);border:1px solid rgba(45,212,191,0.2) }
+.course-semester { display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;background:var(--surface2);color:var(--t3) }
+.grade-row-highlight { background:rgba(108,126,248,0.04) }
+.progress-ring { position:relative;display:inline-flex;align-items:center;justify-content:center }
+.gpa-bar-wrap { background:var(--surface);border-radius:8px;height:6px;overflow:hidden;margin-top:10px }
+.gpa-bar-fill { height:100%;border-radius:8px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1) }
+.subject-icon { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0 }
+.empty-art { font-size:56px;margin-bottom:16px;opacity:0.25;display:block }
+.course-tag { display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-right:4px;margin-bottom:4px }
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="app-shell">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">🎓</div>
+      <div><div class="logo-text">EduMS</div><div class="logo-sub">Student Portal</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div>
+        <div class="nav-sec-lbl">Tổng quan</div>
+        <div class="nav-group">
+          <button class="nav-item active" id="nav-dash"     onclick="show('dash')"><span class="ni">📊</span>Bảng điều khiển</button>
+        </div>
+      </div>
+      <div>
+        <div class="nav-sec-lbl">Học tập</div>
+        <div class="nav-group">
+          <button class="nav-item" id="nav-courses"  onclick="show('courses')"><span class="ni">📚</span>Đăng ký môn học</button>
+          <button class="nav-item" id="nav-enrolled" onclick="show('enrolled')"><span class="ni">📋</span>Môn đã đăng ký</button>
+          <button class="nav-item" id="nav-grades"   onclick="show('grades')"><span class="ni">🏆</span>Kết quả học tập</button>
+        </div>
+      </div>
+      <div>
+        <div class="nav-sec-lbl">Tài khoản</div>
+        <div class="nav-group">
+          <button class="nav-item" id="nav-profile"  onclick="show('profile')"><span class="ni">👤</span>Hồ sơ cá nhân</button>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-av" id="sidebar-avatar">?</div>
+        <div class="user-meta">
+          <div class="user-nm" id="sidebar-user-name">...</div>
+          <div class="user-rl" id="sidebar-user-role">Sinh viên</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Đăng xuất">⎋</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- ════════════ DASHBOARD ════════════ -->
+    <div id="sec-dash" class="section-page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-title">Bảng điều khiển</div>
+          <div class="topbar-sub">Xin chào, <span id="welcome-name" style="color:var(--indigo);font-weight:600"></span>! 👋</div>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="stat-grid">
+          <div class="stat-card" style="cursor:pointer" onclick="show('enrolled')">
+            <div class="stat-ico si-i">📚</div>
+            <div class="stat-num" id="s-enrolled">—</div>
+            <div class="stat-lbl">Môn đang học</div>
+          </div>
+          <div class="stat-card" style="cursor:pointer" onclick="show('grades')">
+            <div class="stat-ico si-t">🏆</div>
+            <div class="stat-num" id="s-gpa">—</div>
+            <div class="stat-lbl">GPA hiện tại</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-ico si-a">✅</div>
+            <div class="stat-num" id="s-graded">—</div>
+            <div class="stat-lbl">Môn đã có điểm</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-ico si-r">⏳</div>
+            <div class="stat-num" id="s-pending">—</div>
+            <div class="stat-lbl">Chờ điểm</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+          <!-- Recent grades table -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Điểm số gần đây</div>
+              <button class="btn btn-ghost btn-sm" onclick="show('grades')">Xem tất cả →</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Môn học</th><th>Mã môn</th><th>TC</th><th>Điểm</th><th>Xếp loại</th></tr></thead>
+                <tbody id="dash-grades-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- GPA breakdown panel -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">Phân tích học lực</div></div>
+            <div style="text-align:center;padding:12px 0 20px">
+              <div id="gpa-display" style="font-size:52px;font-weight:700;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,var(--indigo),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1">0.00</div>
+              <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:6px">GPA tích lũy</div>
+              <div id="rank-badge" style="margin-top:12px;font-size:15px;font-weight:700">—</div>
+            </div>
+            <div id="grade-dist" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ COURSES ════════════ -->
+    <div id="sec-courses" style="display:none" class="section-page">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Đăng ký môn học</div><div class="topbar-sub">Chọn môn học bạn muốn tham gia học kỳ này</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge bi" id="course-count-badge"></span>
+        </div>
+      </div>
+      <div class="page-body">
+        <div class="toolbar">
+          <div class="search-wrap" style="max-width:340px">
+            <span class="search-ico">🔍</span>
+            <input type="text" id="course-search" placeholder="Tìm tên môn, mã môn, giảng viên..." oninput="filterCourses(this.value)">
+          </div>
+          <select id="sem-filter" class="form-control" style="max-width:150px" onchange="filterCourses(document.getElementById('course-search').value)">
+            <option value="">Tất cả học kỳ</option>
+          </select>
+        </div>
+        <div class="course-grid" id="course-grid">
+          <div class="loader"><div class="spin"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ ENROLLED ════════════ -->
+    <div id="sec-enrolled" style="display:none" class="section-page">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Môn đã đăng ký</div><div class="topbar-sub">Danh sách môn học đang theo học</div></div>
+        <button class="btn btn-primary btn-sm" onclick="show('courses')">+ Đăng ký thêm</button>
+      </div>
+      <div class="page-body">
+        <div id="enrolled-cards" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- ════════════ GRADES ════════════ -->
+    <div id="sec-grades" style="display:none" class="section-page">
+      <div class="topbar">
+        <div class="topbar-left"><div class="topbar-title">Kết quả học tập</div><div class="topbar-sub">Bảng điểm tổng hợp</div></div>
+      </div>
+      <div class="page-body">
+        <div class="gpa-hero">
+          <div style="flex-shrink:0">
+            <div class="gpa-num" id="gpa-big">0.00</div>
+            <div class="gpa-lbl">GPA tích lũy</div>
+          </div>
+          <div style="flex:1;padding:0 24px">
+            <div class="gpa-rank" id="gpa-rank">—</div>
+            <div style="font-size:13px;color:var(--t2);margin-top:4px;margin-bottom:10px">Học lực hiện tại</div>
+            <div class="gpa-bar-wrap"><div id="gpa-bar" class="gpa-bar-fill" style="width:0%;background:linear-gradient(90deg,var(--indigo),var(--teal))"></div></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--teal)" id="total-credits">0</div>
+            <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-top:2px">tín chỉ có điểm</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Chi tiết điểm từng môn</div>
+            <div id="grade-summary-badges" style="display:flex;gap:6px"></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Môn học</th><th>Mã môn</th><th>Tín chỉ</th>
+                  <th style="text-align:center">Điểm số</th>
+                  <th style="text-align:center">Xếp loại</th>
+                </tr>
+              </thead>
+              <tbody id="grades-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PROFILE ════════════ -->
+    <div id="sec-profile" style="display:none" class="section-page">
+      <div class="topbar"><div class="topbar-left"><div class="topbar-title">Hồ sơ cá nhân</div></div></div>
+      <div class="page-body">
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:20px;max-width:860px">
+          <!-- Avatar card -->
+          <div class="card" style="text-align:center;padding:32px 20px">
+            <div id="profile-big-av" style="width:80px;height:80px;background:linear-gradient(135deg,var(--indigo),var(--teal));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;margin:0 auto 16px;color:#fff">?</div>
+            <div style="font-size:17px;font-weight:700;margin-bottom:4px" id="profile-display-name">...</div>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:16px">Sinh viên</div>
+            <div style="font-size:12px;color:var(--t2)" id="profile-email-show"></div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Thống kê</div>
+              <div style="display:flex;justify-content:space-around">
+                <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--indigo)" id="pstat-enrolled">—</div><div style="font-size:11px;color:var(--t3)">Môn học</div></div>
+                <div style="text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal)" id="pstat-gpa">—</div><div style="font-size:11px;color:var(--t3)">GPA</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form card -->
+          <div class="card">
+            <div id="profile-alert"></div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">Thông tin cá nhân</div>
+            <div class="form-group">
+              <label class="form-label">Họ và tên</label>
+              <input type="text" id="p-name" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email <span style="color:var(--t3);font-weight:400">(không thể thay đổi)</span></label>
+              <input type="email" id="p-email" class="form-control" disabled style="opacity:0.5">
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Số điện thoại</label><input type="text" id="p-phone" class="form-control" placeholder="0901234567"></div>
+              <div class="form-group"><label class="form-label">Địa chỉ</label><input type="text" id="p-addr" class="form-control" placeholder="TP. Hồ Chí Minh"></div>
+            </div>
+            <div style="font-size:15px;font-weight:700;margin:20px 0 14px;padding-top:16px;border-top:1px solid var(--border)">Đổi mật khẩu</div>
+            <div class="form-group" style="margin-bottom:20px">
+              <label class="form-label">Mật khẩu mới <span style="color:var(--t3);font-weight:400">(để trống nếu không đổi)</span></label>
+              <input type="password" id="p-pw" class="form-control" placeholder="Tối thiểu 6 ký tự">
+            </div>
+            <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">💾 Lưu thay đổi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+let allCourses = [], myEnrollments = [], myGrades = [];
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+async function initPage() {
+  const auth = await checkAuth();
+  if (!auth || currentUser.role !== 'student') { window.location.href = '../index.html'; return; }
+  loadUserUI();
+  document.getElementById('welcome-name').textContent = currentUser.full_name.split(' ').pop();
+  await loadDash();
+  loadProfile();
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+async function loadDash() {
+  const [eR, gR] = await Promise.all([get('/enrollments'), get('/grades')]);
+  myEnrollments = eR.ok ? (eR.data || []) : [];
+  myGrades      = gR.ok ? (gR.data || []) : [];
+
+  const graded  = myGrades.filter(g => g.grade !== null && g.grade !== undefined);
+  const pending = myEnrollments.length - graded.length;
+  const gpa     = calcGPA(myGrades);
+
+  document.getElementById('s-enrolled').textContent = myEnrollments.length;
+  document.getElementById('s-graded').textContent   = graded.length;
+  document.getElementById('s-pending').textContent  = Math.max(0, pending);
+  document.getElementById('s-gpa').textContent      = gpa;
+  document.getElementById('gpa-display').textContent = gpa;
+
+  const gpaF = parseFloat(gpa);
+  const rank = gpaF >= 8.5 ? '🏅 Xuất sắc' : gpaF >= 7 ? '⭐ Giỏi' : gpaF >= 5.5 ? '✅ Khá' : gpaF > 0 ? '⚠️ Trung bình' : '—';
+  document.getElementById('rank-badge').textContent = rank;
+
+  // Grade distribution
+  const dist = { A:0, B:0, C:0, D:0 };
+  graded.forEach(g => { const l = g.letter_grade; if (l) dist[l] = (dist[l]||0)+1; });
+  const distEl = document.getElementById('grade-dist');
+  const colors = { A:'var(--teal)', B:'var(--indigo)', C:'var(--amber)', D:'var(--rose)' };
+  const labels = { A:'Xuất sắc / Giỏi (≥8.5)', B:'Giỏi (7–8.4)', C:'Khá (5.5–6.9)', D:'Yếu (<5.5)' };
+  distEl.innerHTML = Object.entries(dist).map(([l, cnt]) => {
+    const pct = graded.length ? Math.round(cnt/graded.length*100) : 0;
+    return `<div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:${colors[l]};font-weight:600">Loại ${l} — ${labels[l]}</span>
+        <span style="color:var(--t3)">${cnt} môn</span>
+      </div>
+      <div style="background:var(--surface);border-radius:4px;height:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${colors[l]};border-radius:4px;transition:width 0.7s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Recent grades table
+  const tb = document.getElementById('dash-grades-body');
+  if (!myGrades.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:36px;color:var(--t3)">Chưa có điểm nào</td></tr>';
+    return;
+  }
+  tb.innerHTML = myGrades.slice(0, 5).map(g => `
+    <tr>
+      <td><strong>${g.course_name}</strong></td>
+      <td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--indigo)">${g.code}</code></td>
+      <td style="color:var(--t3)">${g.credits}</td>
+      <td class="${gradeClass(g.grade)}" style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700">${g.grade ?? '—'}</td>
+      <td>${gradeLabel(g.letter_grade)}</td>
+    </tr>`).join('');
+}
+
+// ─── COURSES ─────────────────────────────────────────────────────────────────
+async function loadCourses() {
+  document.getElementById('course-grid').innerHTML = '<div class="loader"><div class="spin"></div></div>';
+  const [cR, eR] = await Promise.all([get('/courses'), get('/enrollments')]);
+  if (!cR.ok) { toast('Lỗi tải danh sách môn học. Kiểm tra server đang chạy.', 'err'); return; }
+  allCourses    = cR.data || [];
+  myEnrollments = eR.ok ? (eR.data || []) : [];
+
+  // Populate semester filter
+  const sems = [...new Set(allCourses.map(c => c.semester).filter(Boolean))].sort();
+  const selEl = document.getElementById('sem-filter');
+  selEl.innerHTML = '<option value="">Tất cả học kỳ</option>' +
+    sems.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  document.getElementById('course-count-badge').textContent = allCourses.length + ' môn học';
+  renderCourses(allCourses);
+}
+
+function renderCourses(list) {
+  const enrolledIds = new Set(myEnrollments.map(e => e.course_id));
+  const el = document.getElementById('course-grid');
+  if (!list.length) {
+    el.innerHTML = '<div style="grid-column:1/-1"><div class="empty"><span class="empty-art">📚</span><p>Không tìm thấy môn học phù hợp</p></div></div>';
+    return;
+  }
+  el.innerHTML = list.map(c => {
+    const isEnrolled = enrolledIds.has(c.id);
+    const isFull     = c.enrolled_count >= c.max_students;
+    const pct        = c.max_students > 0 ? Math.round(c.enrolled_count / c.max_students * 100) : 0;
+    const icons      = { CS: '💻', MATH: '📐', ENG: '🌐', PHY: '⚡', CHE: '🧪' };
+    const ico        = Object.entries(icons).find(([k]) => c.code.startsWith(k))?.[1] || '📖';
+    return `<div class="c-card">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px">
+        <div class="subject-icon si-i">${ico}</div>
+        <div style="flex:1;min-width:0">
+          <div class="c-code">${c.code}</div>
+          <div class="c-name" style="margin-top:2px">${c.name}</div>
+        </div>
+        <span class="badge ${c.credits >= 4 ? 'ba' : 'bi'}">${c.credits} TC</span>
+      </div>
+      <div class="c-desc">${c.description || 'Không có mô tả'}</div>
+      <div class="c-meta">
+        <div class="c-mi">👨‍🏫 ${c.teacher_name || 'Chưa phân công'}</div>
+        ${c.semester ? `<div class="c-mi">📅 ${c.semester}</div>` : ''}
+      </div>
+      <div class="c-footer">
+        <div style="flex:1">
+          <div style="font-size:11px;color:${pct >= 90 ? 'var(--rose)' : 'var(--t3)'};margin-bottom:4px">${c.enrolled_count}/${c.max_students} sinh viên ${pct >= 90 ? '⚠️' : ''}</div>
+          <div class="cap-bar"><div class="cap-fill" style="width:${pct}%;background:${pct >= 90 ? 'var(--rose)' : 'linear-gradient(90deg,var(--teal),var(--indigo))'}"></div></div>
+        </div>
+        <div style="margin-left:14px">
+          ${isEnrolled
+            ? '<span class="enrolled-badge">✓ Đã đăng ký</span>'
+            : isFull
+              ? '<span class="badge br">Hết chỗ</span>'
+              : `<button class="btn btn-primary btn-sm" onclick="enrollCourse(${c.id},this)">Đăng ký</button>`
+          }
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCourses(q) {
+  const lower  = q.toLowerCase();
+  const semVal = document.getElementById('sem-filter').value;
+  const filtered = allCourses.filter(c => {
+    const matchQ   = !q || c.name.toLowerCase().includes(lower) || c.code.toLowerCase().includes(lower) || (c.teacher_name||'').toLowerCase().includes(lower);
+    const matchSem = !semVal || c.semester === semVal;
+    return matchQ && matchSem;
+  });
+  renderCourses(filtered);
+}
+
+async function enrollCourse(cid, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  const r = await post('/enroll', { course_id: cid });
+  if (r.ok) { toast('Đăng ký thành công!', 'ok'); await loadCourses(); await loadDash(); }
+  else { toast(r.data.message || 'Đăng ký thất bại', 'err'); btn.disabled = false; btn.textContent = 'Đăng ký'; }
+}
+
+// ─── ENROLLED ────────────────────────────────────────────────────────────────
+async function loadEnrolled() {
+  const r = await get('/enrollments');
+  if (!r.ok) { toast('Lỗi tải danh sách', 'err'); return; }
+  const list = r.data || [];
+  const el   = document.getElementById('enrolled-cards');
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><span class="empty-art">📋</span><p>Chưa đăng ký môn học nào</p><button class="btn btn-primary" style="margin-top:16px" onclick="show('courses')">+ Đăng ký ngay</button></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(e => {
+    const hasGrade = e.grade !== null && e.grade !== undefined;
+    const gcls     = hasGrade ? gradeClass(e.grade) : '';
+    const icons    = { CS: '💻', MATH: '📐', ENG: '🌐', PHY: '⚡', CHE: '🧪' };
+    const ico      = Object.entries(icons).find(([k]) => e.code.startsWith(k))?.[1] || '📖';
+    return `<div class="card" style="padding:16px 20px">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="subject-icon si-i" style="width:44px;height:44px;font-size:20px;flex-shrink:0">${ico}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <strong style="font-size:15px">${e.course_name}</strong>
+            <code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--indigo)">${e.code}</code>
+            ${e.semester ? `<span class="course-semester">${e.semester}</span>` : ''}
+          </div>
+          <div style="display:flex;gap:16px;font-size:12.5px;color:var(--t3)">
+            <span>👨‍🏫 ${e.teacher_name || 'Chưa phân công'}</span>
+            <span>🎯 ${e.credits} tín chỉ</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+          ${hasGrade
+            ? `<div style="text-align:center"><div class="${gcls}" style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace">${e.grade}</div><div style="font-size:11px;color:var(--t3)">điểm</div></div>`
+            : `<div style="text-align:center;padding:6px 14px;background:var(--amber-bg);border-radius:8px;border:1px solid rgba(245,158,11,0.2)"><div style="font-size:11px;font-weight:600;color:var(--amber)">⏳ Chờ điểm</div></div>`
+          }
+          ${gradeLabel(e.letter_grade)}
+          <button class="btn btn-danger btn-sm" onclick="dropCourse(${e.id},this)" title="Hủy đăng ký">Hủy</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function dropCourse(eid, btn) {
+  if (!confirm('Bạn có chắc muốn hủy đăng ký môn này?')) return;
+  btn.disabled = true; btn.textContent = '...';
+  const r = await del('/enrollments/' + eid);
+  if (r.ok) { toast('Đã hủy đăng ký', 'ok'); await loadEnrolled(); await loadDash(); }
+  else { toast(r.data.message || 'Lỗi', 'err'); btn.disabled = false; btn.textContent = 'Hủy'; }
+}
+
+// ─── GRADES ──────────────────────────────────────────────────────────────────
+async function loadGrades() {
+  const r = await get('/grades');
+  if (!r.ok) { toast('Lỗi tải điểm', 'err'); return; }
+  const grades = r.data || [];
+
+  const gpa  = calcGPA(grades);
+  const gpaF = parseFloat(gpa);
+  document.getElementById('gpa-big').textContent  = gpa;
+  document.getElementById('gpa-bar').style.width  = Math.min(100, gpaF / 10 * 100) + '%';
+  const rank = gpaF >= 8.5 ? '🏅 Xuất sắc' : gpaF >= 7 ? '⭐ Giỏi' : gpaF >= 5.5 ? '✅ Khá' : gpaF > 0 ? '⚠️ Trung bình' : '—';
+  document.getElementById('gpa-rank').textContent = rank;
+
+  const valid = grades.filter(g => g.grade !== null && g.grade !== undefined);
+  const tc    = valid.reduce((s, g) => s + (parseInt(g.credits)||3), 0);
+  document.getElementById('total-credits').textContent = tc;
+
+  // Summary badges
+  const dist = { A:0, B:0, C:0, D:0 };
+  valid.forEach(g => { if (g.letter_grade) dist[g.letter_grade]++; });
+  const colors = { A:'bt', B:'bi', C:'ba', D:'br' };
+  document.getElementById('grade-summary-badges').innerHTML =
+    Object.entries(dist).filter(([,v]) => v > 0)
+      .map(([l, v]) => `<span class="badge ${colors[l]}">Loại ${l}: ${v}</span>`).join('');
+
+  const tb = document.getElementById('grades-body');
+  if (!grades.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:48px;color:var(--t3)"><span style="font-size:40px;display:block;margin-bottom:12px;opacity:0.3">🏆</span>Chưa có điểm nào</td></tr>';
+    return;
+  }
+  tb.innerHTML = grades.map(g => `
+    <tr class="${g.grade !== null ? 'grade-row-highlight' : ''}">
+      <td><strong>${g.course_name}</strong></td>
+      <td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--indigo)">${g.code}</code></td>
+      <td style="color:var(--t3)">${g.credits}</td>
+      <td style="text-align:center">
+        ${g.grade !== null && g.grade !== undefined
+          ? `<span class="${gradeClass(g.grade)}" style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace">${g.grade}</span>`
+          : `<span style="color:var(--t3);font-size:12px">Chưa có</span>`}
+      </td>
+      <td style="text-align:center">${gradeLabel(g.letter_grade)}</td>
+    </tr>`).join('');
+}
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+async function loadProfile() {
+  const [pR, eR, gR] = await Promise.all([get('/me'), get('/enrollments'), get('/grades')]);
+  if (!pR.ok) return;
+  const u = pR.data.user;
+  document.getElementById('p-name').value   = u.full_name || '';
+  document.getElementById('p-email').value  = u.email    || '';
+  document.getElementById('p-phone').value  = u.phone    || '';
+  document.getElementById('p-addr').value   = u.address  || '';
+  document.getElementById('profile-big-av').textContent           = u.full_name.charAt(0).toUpperCase();
+  document.getElementById('profile-display-name').textContent     = u.full_name;
+  document.getElementById('profile-email-show').textContent       = u.email;
+  document.getElementById('pstat-enrolled').textContent = (eR.data||[]).length;
+  document.getElementById('pstat-gpa').textContent      = calcGPA(gR.data||[]);
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('save-profile-btn');
+  btn.disabled = true; btn.textContent = 'Đang lưu...';
+  const pw = document.getElementById('p-pw').value;
+  const r  = await put('/profile', {
+    full_name: document.getElementById('p-name').value.trim(),
+    phone:     document.getElementById('p-phone').value.trim(),
+    address:   document.getElementById('p-addr').value.trim(),
+    password:  pw || undefined,
+  });
+  const al = document.getElementById('profile-alert');
+  btn.disabled = false; btn.textContent = '💾 Lưu thay đổi';
+  if (r.ok) {
+    al.innerHTML = '<div class="alert alert-ok">✓ Cập nhật thành công!</div>';
+    toast('Đã lưu!', 'ok');
+    document.getElementById('p-pw').value = '';
+    setTimeout(() => al.innerHTML = '', 3000);
+    await loadProfile();
+    // Update sidebar
+    const me = await get('/me');
+    if (me.ok) { currentUser = me.data.user; loadUserUI(); }
+  } else {
+    al.innerHTML = `<div class="alert alert-err">${r.data.message || 'Lỗi lưu thông tin'}</div>`;
+  }
+}
+
+// ─── ROUTER ──────────────────────────────────────────────────────────────────
+function show(name) {
+  ['dash','courses','enrolled','grades','profile'].forEach(s => {
+    document.getElementById('sec-'+s).style.display = s === name ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-'+name)?.classList.add('active');
+  if (name === 'courses')  loadCourses();
+  if (name === 'enrolled') loadEnrolled();
+  if (name === 'grades')   loadGrades();
+  if (name === 'profile')  loadProfile();
+}
+
+initPage();
+</script>
+</body>
+</html>
